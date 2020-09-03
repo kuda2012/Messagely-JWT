@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 const db = require("../db");
 const ExpressError = require("../expressError");
+const jwt = require("jsonwebtoken");
 
 /** User class for message.ly */
 
@@ -14,7 +15,6 @@ class User {
 
   static async register({ username, password, first_name, last_name, phone }) {
     if (!username || !password || !first_name || !last_name || !phone) {
-      console.log(username, password, first_name, last_name, phone);
       throw new ExpressError(
         "Please make sure all fields are entered correctly",
         400
@@ -32,7 +32,35 @@ class User {
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
-  static async authenticate(username, password) {}
+  static async authenticate(username, password) {
+    if (!username || !password) {
+      return new ExpressError(
+        "Please make sure username and password are provided",
+        400
+      );
+    }
+    const results = await db.query(
+      `SELECT password FROM users
+       WHERE username = $1`,
+      [username]
+    );
+    if (results.rows[0]) {
+      const checkPw = await bcrypt.compare(password, results.rows[0].password);
+      if (checkPw) {
+        return { msg: `User authenticated. Welcome, ${username}` };
+      } else {
+        return new ExpressError(
+          "Username and Password combination was invalid",
+          400
+        );
+      }
+    } else {
+      return new ExpressError(
+        "Username and Password combination was invalid",
+        400
+      );
+    }
+  }
 
   /** Update last_login_at for user */
 
@@ -74,12 +102,7 @@ class User {
 
   static async messagesTo(username) {}
 }
-const user = User.register({
-  username: "kudaman",
-  password: "dogs",
-  first_name: "kuda",
-  last_name: "mwakutuya",
-  phone: "8322746400",
-}).then((res) => console.log(res));
-// console.log(user);
+const user = User.authenticate("kudaman", "dogs").then((res) => {
+  console.log(res);
+});
 module.exports = User;
