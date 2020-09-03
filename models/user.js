@@ -64,7 +64,19 @@ class User {
 
   /** Update last_login_at for user */
 
-  static async updateLoginTimestamp(username) {}
+  static async updateLoginTimestamp(username) {
+    if (!username) {
+      return new ExpressError("Please make sure username is provided", 400);
+    }
+    const results = await db.query(
+      `UPDATE users
+        SET last_login_at = CURRENT_TIMESTAMP
+        WHERE username = $1
+        RETURNING *`,
+      [username]
+    );
+    return results.rows[0];
+  }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name, phone}, ...] */
@@ -102,7 +114,7 @@ class User {
 
   static async messagesTo(username) {}
 }
-const user = User.authenticate("kudaman", "dogs").then((res) => {
+const user = User.updateLoginTimestamp("kudaman").then((res) => {
   console.log(res);
 });
 module.exports = User;
