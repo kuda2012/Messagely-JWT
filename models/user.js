@@ -72,16 +72,24 @@ class User {
       `UPDATE users
         SET last_login_at = CURRENT_TIMESTAMP
         WHERE username = $1
-        RETURNING *`,
+        RETURNING last_login_at`,
       [username]
     );
-    return results.rows[0];
+    console.log(results.rows[0]);
+    if (results.rows[0].last_login_at) {
+      return {
+        msg: `Updated. Last Login for ${username} is ${results.rows[0].last_login_at}`,
+      };
+    }
   }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name, phone}, ...] */
 
-  static async all() {}
+  static async all() {
+    const results = await db.query(`SELECT * FROM users`);
+    return { users: results.rows };
+  }
 
   /** Get: get user by username
    *
@@ -114,7 +122,5 @@ class User {
 
   static async messagesTo(username) {}
 }
-const user = User.updateLoginTimestamp("kudaman").then((res) => {
-  console.log(res);
-});
+const user = User.all().then((res) => console.log(res));
 module.exports = User;
