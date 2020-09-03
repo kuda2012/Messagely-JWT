@@ -14,20 +14,26 @@ class User {
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
-    if (!username || !password || !first_name || !last_name || !phone) {
-      throw new ExpressError(
-        "Please make sure all fields are entered correctly",
-        400
-      );
-    }
-    const hashedPw = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
-    const result = await db.query(
-      `INSERT INTO users
+    try {
+      if (!username || !password || !first_name || !last_name || !phone) {
+        throw new ExpressError(
+          "Please make sure all fields are entered correctly",
+          400
+        );
+      }
+      const hashedPw = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
+      const result = await db.query(
+        `INSERT INTO users
        VALUES($1, $2, $3, $4, $5)
         RETURNING username                         `,
-      [username, hashedPw, first_name, last_name, phone]
-    );
-    return { msg: `${result.rows[0].username} has been register` };
+        [username, hashedPw, first_name, last_name, phone]
+      );
+      return { msg: `${result.rows[0].username} has been register` };
+    } catch (error) {
+      if (error.code == "23505") {
+        return new ExpressError("Username taken. Please pick another!", 400);
+      }
+    }
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
@@ -104,7 +110,7 @@ class User {
       return new ExpressError("Please make sure username is provided", 400);
     }
     const results = await db.query(
-      `SELECT * from users 
+      `SELECT * FROM users 
                     WHERE username = $1`,
       [username]
     );
@@ -123,7 +129,20 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesFrom(username) {}
+  static async messagesFrom(username) {
+    if (!username) {
+      return new ExpressError("Please make sure username is provided", 400);
+    }
+    const results = await db.query(
+      `SELECT id, u.first_name, u.last_name, u.phone, body, sent_at, read_at
+      FROM messages
+      JOIN users AS u
+      ON messages.to_username = u.username
+      WHERE from_username = $1`,
+      [username]
+    );
+    return results.rows[0];
+  }
 
   /** Return messages to this user.
    *
@@ -135,5 +154,22 @@ class User {
 
   static async messagesTo(username) {}
 }
-const user = User.get("kudaman").then((res) => console.log(res));
+
+const user = User.messagesFrom("kudaman").then((res) => console.log(res));
+// const user = User.register({
+//   username: "kudaman",
+//   password: "dogs",
+//   first_name: "kuda",
+//   last_name: "mwakutuya",
+//   phone: "8322746400",
+// }).then((res) => console.log(res));
+
+// const user2 = User.register({
+//   username: "logiman",
+//   password: "dogs",
+//   first_name: "logi",
+//   last_name: "video",
+//   phone: "8322746400",
+// }).then((res) => console.log(res));
+
 module.exports = User;

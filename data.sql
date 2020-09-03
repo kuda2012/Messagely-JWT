@@ -13,6 +13,6 @@ CREATE TABLE messages (
     from_username text NOT NULL REFERENCES users,
     to_username text NOT NULL REFERENCES users,
     body text NOT NULL,
-    sent_at timestamp with time zone NOT NULL,
+    sent_at timestamp with time zone  DEFAULT LOCALTIMESTAMP NOT NULL,
     read_at timestamp with time zone
 );
