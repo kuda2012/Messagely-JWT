@@ -75,7 +75,6 @@ class User {
         RETURNING last_login_at`,
       [username]
     );
-    console.log(results.rows[0]);
     if (results.rows[0].last_login_at) {
       return {
         msg: `Updated. Last Login for ${username} is ${results.rows[0].last_login_at}`,
@@ -100,7 +99,21 @@ class User {
    *          join_at,
    *          last_login_at } */
 
-  static async get(username) {}
+  static async get(username) {
+    if (!username) {
+      return new ExpressError("Please make sure username is provided", 400);
+    }
+    const results = await db.query(
+      `SELECT * from users 
+                    WHERE username = $1`,
+      [username]
+    );
+    if (results.rows[0]) {
+      return { user: results.rows[0] };
+    } else {
+      return new ExpressError("Username provided does not exist", 404);
+    }
+  }
 
   /** Return messages from this user.
    *
@@ -122,5 +135,5 @@ class User {
 
   static async messagesTo(username) {}
 }
-const user = User.all().then((res) => console.log(res));
+const user = User.get("kudaman").then((res) => console.log(res));
 module.exports = User;
