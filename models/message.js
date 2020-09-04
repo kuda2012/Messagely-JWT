@@ -28,6 +28,9 @@ class Message {
   /** Update read_at for message */
 
   static async markRead(id) {
+    if (isNaN(id)) {
+      throw new ExpressError("Please make sure your id is a number", 400);
+    }
     const result = await db.query(
       `UPDATE messages
            SET read_at = current_timestamp
@@ -52,6 +55,9 @@ class Message {
    */
 
   static async get(id) {
+    if (isNaN(id)) {
+      throw new ExpressError("Please make sure your id is a number", 400);
+    }
     const result = await db.query(
       `SELECT m.id,
                 m.from_username,
@@ -71,7 +77,7 @@ class Message {
           WHERE m.id = $1`,
       [id]
     );
-
+    console.log(m);
     let m = result.rows[0];
 
     if (!m) {

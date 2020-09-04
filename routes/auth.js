@@ -46,7 +46,6 @@ router.post("/login", async (req, res, next) => {
  *
  *  Make sure to update their last-login!
  */
-
 router.post("/register", async (req, res, next) => {
   try {
     if (
