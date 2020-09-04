@@ -63,12 +63,12 @@ router.post("/register", async (req, res, next) => {
     }
     const results = await User.register(req.body);
     if (results) {
-      await User.updateLoginTimestamp(req.body.username);
       const token = jwt.sign(
         { iat: Date.now(), username: req.body.username },
         SECRET_KEY
       );
       results.token = token;
+      await User.updateLoginTimestamp(req.body.username);
       return res.json(results);
     } else {
       throw new ExpressError(
