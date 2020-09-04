@@ -5,7 +5,7 @@ CREATE TABLE users (
     last_name text NOT NULL,
     phone text NOT NULL,
     join_at  timestamp without time zone DEFAULT LOCALTIMESTAMP NOT NULL,
-    last_login_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    last_login_at timestamp with time zone 
 );
 
 CREATE TABLE messages (
@@ -13,6 +13,6 @@ CREATE TABLE messages (
     from_username text NOT NULL REFERENCES users,
     to_username text NOT NULL REFERENCES users,
     body text NOT NULL,
-    sent_at timestamp with time zone  DEFAULT LOCALTIMESTAMP NOT NULL,
+    sent_at timestamp with time zone DEFAULT LOCALTIMESTAMP NOT NULL,
     read_at timestamp with time zone
 );

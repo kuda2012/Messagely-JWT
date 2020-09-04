@@ -99,12 +99,12 @@ class Message {
   }
 }
 
-// const user1NewMessageToUser2 = Message.create({
-//   from_username: "kudaman",
-//   to_username: "logiman",
-//   body: "Hey there logiman, don't copy my username again!",
-// }).then((res) => {
-//   console.log(res);
-// });
+const user1NewMessageToUser2 = Message.create({
+  from_username: "kudaman",
+  to_username: "logiman",
+  body: "Hey there logiman, don't copy my username again!",
+}).then((res) => {
+  console.log(res);
+});
 
 module.exports = Message;

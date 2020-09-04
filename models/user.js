@@ -25,10 +25,10 @@ class User {
       const result = await db.query(
         `INSERT INTO users
        VALUES($1, $2, $3, $4, $5)
-        RETURNING username                         `,
+        RETURNING username, password`,
         [username, hashedPw, first_name, last_name, phone]
       );
-      return { msg: `${result.rows[0].username} has been register` };
+      return result.rows[0];
     } catch (error) {
       if (error.code == "23505") {
         return new ExpressError("Username taken. Please pick another!", 400);
@@ -53,12 +53,9 @@ class User {
     if (results.rows[0]) {
       const checkPw = await bcrypt.compare(password, results.rows[0].password);
       if (checkPw) {
-        return { msg: `User authenticated. Welcome, ${username}` };
+        return checkPw;
       } else {
-        return new ExpressError(
-          "Username and Password combination was invalid",
-          400
-        );
+        return checkPw;
       }
     } else {
       return new ExpressError(
@@ -78,13 +75,13 @@ class User {
       `UPDATE users
         SET last_login_at = CURRENT_TIMESTAMP
         WHERE username = $1
-        RETURNING last_login_at`,
+        RETURNING *`,
       [username]
     );
-    if (results.rows[0].last_login_at) {
-      return {
-        msg: `Updated. Last Login for ${username} is ${results.rows[0].last_login_at}`,
-      };
+    if (results.rows[0]) {
+      return result.rows[0];
+    } else {
+      return new ExpressError("Username provided does not exist", 404);
     }
   }
 
@@ -93,7 +90,7 @@ class User {
 
   static async all() {
     const results = await db.query(`SELECT * FROM users`);
-    return { users: results.rows };
+    return results.rows;
   }
 
   /** Get: get user by username
@@ -111,11 +108,11 @@ class User {
     }
     const results = await db.query(
       `SELECT * FROM users 
-                    WHERE username = $1`,
+       WHERE username = $1`,
       [username]
     );
     if (results.rows[0]) {
-      return { user: results.rows[0] };
+      return results.rows[0];
     } else {
       return new ExpressError("Username provided does not exist", 404);
     }
@@ -141,6 +138,14 @@ class User {
       WHERE from_username = $1`,
       [username]
     );
+    results.rows[0].to_user = {
+      first_name: results.rows[0].first_name,
+      last_name: results.rows[0].last_name,
+      phone: results.rows[0].phone,
+    };
+    delete results.rows[0].first_name;
+    delete results.rows[0].last_name;
+    delete results.rows[0].phone;
     return results.rows[0];
   }
 
@@ -152,10 +157,31 @@ class User {
    *   {id, first_name, last_name, phone}
    */
 
-  static async messagesTo(username) {}
+  static async messagesTo(username) {
+    if (!username) {
+      return new ExpressError("Please make sure username is provided", 400);
+    }
+    const results = await db.query(
+      `SELECT id, u.first_name, u.last_name, u.phone, body, sent_at, read_at
+      FROM messages
+      JOIN users AS u
+      ON messages.from_username = u.username
+      WHERE to_username = $1`,
+      [username]
+    );
+    results.rows[0].from_user = {
+      first_name: results.rows[0].first_name,
+      last_name: results.rows[0].last_name,
+      phone: results.rows[0].phone,
+    };
+    delete results.rows[0].first_name;
+    delete results.rows[0].last_name;
+    delete results.rows[0].phone;
+    return results.rows[0];
+  }
 }
 
-const user = User.messagesFrom("kudaman").then((res) => console.log(res));
+const user = User.messagesTo("logiman").then((res) => console.log(res));
 // const user = User.register({
 //   username: "kudaman",
 //   password: "dogs",
