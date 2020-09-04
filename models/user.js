@@ -2,7 +2,6 @@ const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 const db = require("../db");
 const ExpressError = require("../expressError");
-const jwt = require("jsonwebtoken");
 
 /** User class for message.ly */
 
@@ -14,26 +13,14 @@ class User {
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
-    try {
-      if (!username || !password || !first_name || !last_name || !phone) {
-        throw new ExpressError(
-          "Please make sure all fields are entered correctly",
-          400
-        );
-      }
-      const hashedPw = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
-      const result = await db.query(
-        `INSERT INTO users
+    const hashedPw = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
+    const result = await db.query(
+      `INSERT INTO users
        VALUES($1, $2, $3, $4, $5)
-        RETURNING username, password`,
-        [username, hashedPw, first_name, last_name, phone]
-      );
-      return result.rows[0];
-    } catch (error) {
-      if (error.code == "23505") {
-        return new ExpressError("Username taken. Please pick another!", 400);
-      }
-    }
+        RETURNING username, password, first_name, last_name, phone`,
+      [username, hashedPw, first_name, last_name, phone]
+    );
+    return result.rows[0];
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
@@ -52,16 +39,9 @@ class User {
     );
     if (results.rows[0]) {
       const checkPw = await bcrypt.compare(password, results.rows[0].password);
-      if (checkPw) {
-        return checkPw;
-      } else {
-        return checkPw;
-      }
+      return checkPw;
     } else {
-      return new ExpressError(
-        "Username and Password combination was invalid",
-        400
-      );
+      return false;
     }
   }
 
@@ -79,7 +59,7 @@ class User {
       [username]
     );
     if (results.rows[0]) {
-      return result.rows[0];
+      return results.rows[0];
     } else {
       return new ExpressError("Username provided does not exist", 404);
     }
@@ -89,7 +69,9 @@ class User {
    * [{username, first_name, last_name, phone}, ...] */
 
   static async all() {
-    const results = await db.query(`SELECT * FROM users`);
+    const results = await db.query(
+      `SELECT username, first_name, last_name, phone FROM users`
+    );
     return results.rows;
   }
 
@@ -107,7 +89,7 @@ class User {
       return new ExpressError("Please make sure username is provided", 400);
     }
     const results = await db.query(
-      `SELECT * FROM users 
+      `SELECT username, first_name, last_name, phone, join_at, last_login_at FROM users 
        WHERE username = $1`,
       [username]
     );
@@ -131,22 +113,26 @@ class User {
       return new ExpressError("Please make sure username is provided", 400);
     }
     const results = await db.query(
-      `SELECT id, u.first_name, u.last_name, u.phone, body, sent_at, read_at
+      `SELECT id, u.username, u.first_name, u.last_name, u.phone, body, sent_at, read_at
       FROM messages
       JOIN users AS u
       ON messages.to_username = u.username
       WHERE from_username = $1`,
       [username]
     );
-    results.rows[0].to_user = {
-      first_name: results.rows[0].first_name,
-      last_name: results.rows[0].last_name,
-      phone: results.rows[0].phone,
-    };
-    delete results.rows[0].first_name;
-    delete results.rows[0].last_name;
-    delete results.rows[0].phone;
-    return results.rows[0];
+    results.rows.forEach(function (row, i, arr) {
+      row.to_user = {
+        username: arr[i].username,
+        first_name: arr[i].first_name,
+        last_name: arr[i].last_name,
+        phone: arr[i].phone,
+      };
+      delete arr[i].username;
+      delete arr[i].first_name;
+      delete arr[i].last_name;
+      delete arr[i].phone;
+    });
+    return results.rows;
   }
 
   /** Return messages to this user.
@@ -162,26 +148,30 @@ class User {
       return new ExpressError("Please make sure username is provided", 400);
     }
     const results = await db.query(
-      `SELECT id, u.first_name, u.last_name, u.phone, body, sent_at, read_at
+      `SELECT id, u.username, u.first_name, u.last_name, u.phone, body, sent_at, read_at
       FROM messages
       JOIN users AS u
       ON messages.from_username = u.username
       WHERE to_username = $1`,
       [username]
     );
-    results.rows[0].from_user = {
-      first_name: results.rows[0].first_name,
-      last_name: results.rows[0].last_name,
-      phone: results.rows[0].phone,
-    };
-    delete results.rows[0].first_name;
-    delete results.rows[0].last_name;
-    delete results.rows[0].phone;
-    return results.rows[0];
+    results.rows.forEach(function (row, i, arr) {
+      row.from_user = {
+        username: arr[i].username,
+        first_name: arr[i].first_name,
+        last_name: arr[i].last_name,
+        phone: arr[i].phone,
+      };
+      delete arr[i].username;
+      delete arr[i].first_name;
+      delete arr[i].last_name;
+      delete arr[i].phone;
+    });
+    return results.rows;
   }
 }
 
-const user = User.messagesTo("logiman").then((res) => console.log(res));
+// const user = User.messagesTo("logiman").then((res) => console.log(res));
 // const user = User.register({
 //   username: "kudaman",
 //   password: "dogs",
